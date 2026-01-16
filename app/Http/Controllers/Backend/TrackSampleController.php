@@ -88,6 +88,7 @@ class TrackSampleController extends Controller
             $user = User::find($request->booking_user_id);
             $phlebotomist = User::where('user_id', $request->phlebotomist_id)->first();
 
+            Booking::where('id', $request->booking_id)->update(['status' => 'In Progress']);
             // Notify User
             sendNotification(
                 $user->id,
@@ -206,7 +207,7 @@ class TrackSampleController extends Controller
             $booking = Booking::find($sample->booking_id);
             $user = User::find($booking->user_id);
 
-            // Lab 
+            // Lab
             sendNotification(
                 $labAdmin->id,
                 'phlebotomist-sample-upload',
@@ -381,7 +382,7 @@ class TrackSampleController extends Controller
             $lab = lab::where('lab_id', $booking->lab_id)->first();
             $phlebotomist = User::where('user_id', $sample->agent_id)->first();
 
-            // Lab 
+            // Lab
             sendNotification(
                 $phlebotomist->id,
                 'lab-accepted-phlebotomist',
@@ -426,7 +427,7 @@ class TrackSampleController extends Controller
             $booking = Booking::find($samples->booking_id);
             $user = User::find($booking->user_id);
 
-            // Lab 
+            // Lab
             sendNotification(
                 $labAdmin->id,
                 'phlebotomist-reject-collection',

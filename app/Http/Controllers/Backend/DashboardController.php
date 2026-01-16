@@ -25,6 +25,7 @@ class DashboardController extends Controller
     {
         $role = auth()->user()->role;
 
+
         if ($role === 0) {
             // Total counts
             $totalUsers = User::where('role', 1)->where('corporate_id', null)->count();
@@ -109,6 +110,9 @@ class DashboardController extends Controller
                 'confirmed' => Booking::where('status', 'Confirmed')->where('lab_id', $labId)->count(),
                 'cancelled' => Booking::where('status', 'Cancelled')->where('lab_id', $labId)->count(),
                 'completed' => Booking::where('status', 'Completed')->where('lab_id', $labId)->count(),
+                'in-progress' => Booking::where('status', 'In Progress')->where('lab_id', $labId)->count(),
+                'emergency' => Booking::where('is_emergency', 1)->where('lab_id', $labId)->count(),
+                'unread' => Booking::where('is_read', 0)->where('lab_id', $labId)->count(),
             ];
 
             // Staff counts

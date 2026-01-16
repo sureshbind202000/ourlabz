@@ -608,6 +608,8 @@ Route::middleware('auth')->group(function () {
 
     // Patient Bookings
     Route::get('/patient-bookings', [LabBookingController::class, 'index'])->name('patient.bookings');
+    Route::post('/patient-booking/toggle-emergency',[LabBookingController::class, 'toggleEmergency'])->name('patient.booking.toggle-emergency');
+
     Route::get('/booking-list', [LabBookingController::class, 'list'])->name('patient.booking.list');
     Route::get('/patient-bookings/completed', [LabBookingController::class, 'completedIndex'])->name('patient.bookings.completed');
     Route::get('/booking-list/completed', [LabBookingController::class, 'completedList'])->name('patient.booking.list.completed');

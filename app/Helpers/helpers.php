@@ -52,53 +52,102 @@ if (!function_exists('sendNotification')) {
 
      */
 
-    function sendNotification($userIds = null, string $notificationFor, array $params = [])
+    //     function sendNotification($userIds = null, string $notificationFor, array $params = [])
 
-    {
+    //     {
 
+    //         $template = NotificationMessage::where('slug', $notificationFor)->first();
+
+    //         if (!$template) {
+
+    //             return;
+//         }
+
+
+
+    //         // Replace placeholders dynamically
+
+    //         $message = $template->message;
+
+    //         foreach ($params as $key => $value) {
+
+    //             $message = str_replace('{{' . $key . '}}', $value, $message);
+//         }
+
+
+
+    //         $userIds = $userIds ?? Auth::id();
+
+    //         $userIds = is_array($userIds) ? $userIds : [$userIds];
+
+
+
+    //         $users = User::whereIn('id', $userIds)->get();
+
+
+
+    //         foreach ($users as $user) {
+
+    //             $user->notify(new UserNotification($message, $template->link));
+//         }
+//     }
+
+
+    /**
+     * Send notification with optional custom URL
+     *
+     * @param int|array|null $userIds
+     * @param string $notificationFor
+     * @param array $params
+     * @param string|null $customUrl
+     */
+    function sendNotification(
+        $userIds = null,
+        string $notificationFor,
+        array $params = [],
+        string $customUrl = null
+    ) {
         $template = NotificationMessage::where('slug', $notificationFor)->first();
-
         if (!$template) {
-
             return;
         }
 
-
-
-        // Replace placeholders dynamically
-
-        $message = $template->message;
-
-        foreach ($params as $key => $value) {
-
-            $message = str_replace('{{' . $key . '}}', $value, $message);
-        }
-
-
-
         $userIds = $userIds ?? Auth::id();
-
         $userIds = is_array($userIds) ? $userIds : [$userIds];
-
-
 
         $users = User::whereIn('id', $userIds)->get();
 
-
-
         foreach ($users as $user) {
 
-            $user->notify(new UserNotification($message, $template->link));
+            // Auto inject user_id if not present
+            $params['user_id'] = $params['user_id'] ?? $user->id;
+
+            /* ---------------- MESSAGE ---------------- */
+            $message = $template->message;
+            foreach ($params as $key => $value) {
+                $message = str_replace('{{' . $key . '}}', $value, $message);
+            }
+
+            /* ---------------- LINK ---------------- */
+            // Priority:
+            // 1️⃣ Custom URL (if provided)
+            // 2️⃣ Template URL
+            $link = $customUrl ?? $template->link;
+
+            // Replace placeholders in link
+            if ($link) {
+                foreach ($params as $key => $value) {
+                    $link = str_replace('{{' . $key . '}}', $value, $link);
+                }
+            }
+
+            $user->notify(new UserNotification($message, $link));
         }
     }
+
 }
 
-
-
-
-
 function getBookingStatusBadge($status)
-
 {
 
     switch ($status) {
@@ -119,6 +168,9 @@ function getBookingStatusBadge($status)
 
             return new HtmlString('<span class="badge badge-subtle-success">Completed</span>');
 
+        case 'In Progress':
+            return new HtmlString('<span class="badge badge-subtle-info">In Progress</span>');
+
         default:
 
             return new HtmlString('<span class="badge badge-subtle-secondary">Unknown</span>');
@@ -128,7 +180,6 @@ function getBookingStatusBadge($status)
 
 
 function getPaymentBadge($paymentStatus)
-
 {
 
     switch ($paymentStatus) {
@@ -154,7 +205,6 @@ function getPaymentBadge($paymentStatus)
 
 
 function getSampleStatus($status)
-
 {
 
     switch ($status) {
@@ -192,7 +242,6 @@ function getSampleStatus($status)
 
 
 function logBookingActivity($booking_id, $action, $description = null)
-
 {
 
     TrackBookingLog::create([
@@ -213,7 +262,6 @@ function logBookingActivity($booking_id, $action, $description = null)
 if (!function_exists('formatCount')) {
 
     function formatCount($number)
-
     {
 
         return $number >= 1000 ? number_format($number / 1000, 1) . 'k' : $number;
@@ -223,7 +271,6 @@ if (!function_exists('formatCount')) {
 
 
 function generateUniqueOrderId(): string
-
 {
 
     do {
@@ -245,7 +292,6 @@ function generateUniqueOrderId(): string
 
 
 function generateDoctorBookingOrderId(): string
-
 {
 
     do {
@@ -288,10 +334,10 @@ function logConsultationActivity($consultation_id, $user_id, $action, $descripti
 if (!function_exists('has_permission')) {
 
     function has_permission($slug, $type = 'view', $role_id = null)
-
     {
 
-        if (!auth()->check()) return false;
+        if (!auth()->check())
+            return false;
 
 
 
@@ -317,7 +363,8 @@ if (!function_exists('has_permission')) {
 
 
 
-        if (!$module) return false;
+        if (!$module)
+            return false;
 
 
 
@@ -329,7 +376,8 @@ if (!function_exists('has_permission')) {
 
 
 
-        if (!$permission) return false;
+        if (!$permission)
+            return false;
 
 
 

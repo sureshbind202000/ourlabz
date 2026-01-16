@@ -42,7 +42,7 @@ class LabBookingController extends Controller
     }
 
     // Patient Booking List
-    public function list()
+    public function list(Request $request)
     {
         try {
             $authUser = auth()->user();
@@ -50,13 +50,27 @@ class LabBookingController extends Controller
             if ($authUser->role == 2) {
                 $labId = $authUser->lab_id;
 
-                $bookings = Booking::with(['user', 'tests.package', 'patients'])
+                $query = Booking::with(['user', 'tests.package', 'patients'])
                     ->where('lab_id', $labId)
                     ->where('booking_type', 'test')
                     ->whereNotIn('status', ['Completed', 'Cancelled'])
                     ->whereHas('user')
-                    ->orderBy('id', 'DESC')
-                    ->get();
+                    ->orderBy('id', 'DESC');
+
+                if(isset($request->is_emergency) && $request->is_emergency == 1){
+                    $query->where('is_emergency', 1);
+                }
+
+                if(isset($request->is_read) && $request->is_read == 0){
+                    $query->where('is_read', 0);
+                }
+
+                if(isset($request->in_progress) && $request->in_progress == 1){
+                    $query->where('status', 'In Progress');
+
+                }
+
+                    $bookings = $query->get();
 
                 foreach ($bookings as $booking) {
                     $booking->encrypted_id = encrypt($booking->id);
@@ -71,6 +85,15 @@ class LabBookingController extends Controller
             return response()->json(['message' => 'Internal Server Error'], 500);
         }
     }
+
+    public function toggleEmergency(Request $request)
+    {
+        Booking::where('id', $request->booking_id)
+            ->update(['is_emergency' => $request->is_emergency]);
+
+        return response()->json(['success' => true]);
+    }
+
 
     public function completedList()
     {
@@ -124,7 +147,13 @@ class LabBookingController extends Controller
         }
         $refering_tests = ReferedTest::where('refered_by_id', $auth->lab_id)->orderBy('id', 'DESC')->get();
         $doctors = User::where('role', 2)->where('lab_id', $auth->lab_id)->where('lab_user_role', 5)->where('status', 1)->get();
-        
+
+        // update is_read status to 1 (read)
+        if ($details->is_read == 0) {
+            $details->is_read = 1;
+            $details->save();
+        }
+
         return view('backend.superadmin.labs.bookings.profile', compact('details', 'lab_phlebotomist', 'logs', 'refering_labs', 'refering_tests', 'doctors'));
     }
 

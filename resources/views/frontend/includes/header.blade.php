@@ -279,8 +279,6 @@
                         <div class="mobile-menu-btn">
                             <div class=" ms-xl-5 ">
 
-
-
                                 <div class="input-group align-items-center px-2 mx-1  "
                                     style="cursor: pointer;width: 180px;">
 
@@ -659,10 +657,6 @@
 
 
 <!-- header area end -->
-
-
-
-
 
 <!-- mobile popup search -->
 

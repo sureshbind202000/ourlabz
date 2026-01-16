@@ -142,8 +142,6 @@ class BookingController extends Controller
     public function bookingStore(Request $request)
     {
         DB::beginTransaction();
-        // dd($request);
-        // exit();
 
         try {
 
@@ -187,7 +185,8 @@ class BookingController extends Controller
                 ->where('from_time', '<=', $bookingTime)
                 ->where('status', 1)
                 ->update([
-                    'status' => 0
+                    'status' => 0,
+                    'slots'  => DB::raw('GREATEST(slots - 1, 0)'),
                 ]);
 
             // ✅ Packages & Patients
@@ -290,6 +289,8 @@ class BookingController extends Controller
                 ->where('item_type', 'App\\Models\\Package')
                 ->delete();
 
+            $booking->encrypted_id = encrypt($booking->id);
+
             // User Notification
             sendNotification(
                 $user->id,
@@ -299,6 +300,7 @@ class BookingController extends Controller
                     'user_name' => $user->name,
                     'lab_name'  => $lab->lab_name,
                     'date'      => $request->date . ' / ' . $request->time,
+                    'url'       => route('patient.booking.details', $booking->encrypted_id),
                 ]
             );
 
@@ -312,6 +314,7 @@ class BookingController extends Controller
                         'user_name' => $user->name,
                         'lab_name'  => $lab->lab_name,
                         'date'      => $request->date . ' / ' . $request->time,
+                        'url'       => route('patient.booking.details', $booking->encrypted_id),
                     ]
                 );
             }

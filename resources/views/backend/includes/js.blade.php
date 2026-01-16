@@ -48,12 +48,27 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 @include('frontend.includes.location')
 <script>
     $(document).ready(function() {
+
         const currentUrl = window.location.href;
 
-        // Step 1️⃣ — Remove previous active classes
+        // Initialize Toastr options
+        // toastr.options = {
+        //     "closeButton": true,
+        //     "progressBar": true,
+        //     "positionClass": "toast-top-right",
+        //     "timeOut": "5000",
+        //     "extendedTimeOut": "2000",
+        //     "newestOnTop": true,
+        //     "preventDuplicates": true
+        // };
+
+                // Step 1️⃣ — Remove previous active classes
         $("#navbarVerticalNav .nav-link").removeClass("active");
 
         // Step 2️⃣ — Find and mark the current link as active
@@ -689,7 +704,7 @@ $lab_status = $lab->status;
 
                         <p><strong>Date:</strong> ${res.booking.created_at}</p>
 
-                        
+
 
                         <h6 class="mt-3 mb-2">Tests:</h6>
 
@@ -761,105 +776,229 @@ $lab_status = $lab->status;
 
 
 
+        // function loadHeaderNotifications() {
+
+        //     $.ajax({
+
+        //         url: "{{ route('notifications.list') }}",
+
+        //         type: "GET",
+
+        //         success: function(data) {
+
+        //             let html = '';
+
+
+
+        //             if (data.length > 0) {
+
+        //                 // Sort: Unread first, newest first
+
+        //                 data.sort((a, b) => {
+
+        //                     if (!a.read_at && b.read_at) return -1;
+
+        //                     if (a.read_at && !b.read_at) return 1;
+
+        //                     return new Date(b.created_at) - new Date(a.created_at);
+
+        //                 });
+
+
+
+        //                 data.forEach(notification => {
+
+        //                     let readClass = notification.read_at ? "notification-unread" :
+
+        //                         "notification-read mark-read";
+
+        //                     let iconClass = notification.read_at ?
+
+        //                         "uploads/notify/open_noti.png" :
+
+        //                         "uploads/notify/new_noti.png";
+
+        //                     let humanTime = moment(notification.created_at).fromNow();
+
+
+
+        //                     html += `
+
+        //                 <div class="list-group-item">
+
+        //                     <a class="notification notification-flush ${readClass}" data-id="${notification.id}" href="${notification.data.url}">
+
+        //                         <div class="notification-avatar">
+
+        //                             <div class="avatar avatar-2xl me-3">
+
+        //                                 <img class="rounded-circle" src="{{ asset('${iconClass}') }}" alt="" />
+
+        //                             </div>
+
+        //                         </div>
+
+        //                         <div class="notification-body">
+
+        //                             <p class="mb-1">${notification.data.message}</p>
+
+        //                             <span class="notification-time">
+
+        //                                 <span class="me-2" role="img" aria-label="Emoji">📢</span> ${humanTime}
+
+        //                             </span>
+
+        //                         </div>
+
+        //                     </a>
+
+        //                 </div>
+
+        //             `;
+
+        //                 });
+
+        //             } else {
+
+        //                 html = `<p class="text-center text-muted p-3">No notifications found</p>`;
+
+        //             }
+
+
+
+        //             $('.list-group.list-group-flush.fw-normal.fs-10').html(html);
+
+        //         }
+
+        //     });
+
+        // }
+
+
+
+        // Optional: har 10 sec me check
+        setInterval(loadHeaderNotifications, 10000);
+
+
+        let lastNotificationId = 0;
+        let firstLoad = true;
+        let shownNotificationIds = new Set(); // ✅ Track jo already dikha chuke
+
+        // Har 10 sec me check
+        setInterval(loadHeaderNotifications, 10000);
+
+        function playNotificationSound() {
+            let audio = document.getElementById('notifySound');
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log('Sound blocked'));
+            }
+        }
+
+        function showNotificationToastr(notification) {
+            // Toastr configuration - persistent until manually closed
+            toastr.options = {
+                "closeButton": true,
+                "debug": false,
+                "newestOnTop": true,
+                "progressBar": false,
+                "positionClass": "toast-top-right",
+                "preventDuplicates": true,
+                "onclick": function() {
+                    window.location.href = notification.data.url;
+                },
+                "showDuration": "300",
+                "hideDuration": "1000",
+                "timeOut": "0",                // ✅ Persistent
+                "extendedTimeOut": "0",
+                "showEasing": "swing",
+                "hideEasing": "linear",
+                "showMethod": "fadeIn",
+                "hideMethod": "fadeOut"
+            };
+
+            toastr.info(
+                notification.data.message,
+                '🔔 New Notification',
+                {
+                    timeOut: 0,
+                    extendedTimeOut: 0
+                }
+            );
+        }
+
         function loadHeaderNotifications() {
-
             $.ajax({
-
                 url: "{{ route('notifications.list') }}",
-
                 type: "GET",
-
                 success: function(data) {
-
                     let html = '';
 
-
-
                     if (data.length > 0) {
+                        // SORT (newest first)
+                        data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-                        // Sort: Unread first, newest first
+                        // 🔐 FIRST LOAD → current notifications ko track karo, NO TOASTR
+                        if (firstLoad) {
+                            data.forEach(n => {
+                                shownNotificationIds.add(n.id); // ✅ Existing sab ko add karo
+                            });
+                            if (data.length > 0) {
+                                lastNotificationId = data[0].id;
+                            }
+                            firstLoad = false;
+                        } else {
+                            // ✅ Only TRULY NEW notifications (jo pehle kabhi nahi dikhe)
+                            let newNotifications = data.filter(n =>
+                                !shownNotificationIds.has(n.id) // ✅ Jo pehli baar aa raha hai
+                            );
 
-                        data.sort((a, b) => {
+                            if (newNotifications.length > 0) {
+                                newNotifications
+                                    .sort((a, b) => a.id - b.id) // oldest first popup
+                                    .forEach(n => {
+                                        showNotificationToastr(n);  // ✅ Sirf naye notifications
+                                        playNotificationSound();
+                                        shownNotificationIds.add(n.id); // ✅ Track karo
+                                    });
 
-                            if (!a.read_at && b.read_at) return -1;
+                                // Update last ID
+                                lastNotificationId = Math.max(...newNotifications.map(n => n.id));
+                            }
+                        }
 
-                            if (a.read_at && !b.read_at) return 1;
-
-                            return new Date(b.created_at) - new Date(a.created_at);
-
-                        });
-
-
-
+                        // UI render (same as before)
                         data.forEach(notification => {
+                            let readClass = notification.read_at
+                                ? "notification-unread"
+                                : "notification-read mark-read";
 
-                            let readClass = notification.read_at ? "notification-unread" :
-
-                                "notification-read mark-read";
-
-                            let iconClass = notification.read_at ?
-
-                                "uploads/notify/open_noti.png" :
-
-                                "uploads/notify/new_noti.png";
+                            let iconClass = notification.read_at
+                                ? "uploads/notify/open_noti.png"
+                                : "uploads/notify/new_noti.png";
 
                             let humanTime = moment(notification.created_at).fromNow();
 
-
-
                             html += `
-
-                        <div class="list-group-item">
-
-                            <a class="notification notification-flush ${readClass}" data-id="${notification.id}" href="${notification.data.url}">
-
-                                <div class="notification-avatar">
-
-                                    <div class="avatar avatar-2xl me-3">
-
-                                        <img class="rounded-circle" src="{{ asset('${iconClass}') }}" alt="" />
-
+                            <div class="list-group-item">
+                                <a class="notification notification-flush ${readClass}"
+                                href="${notification.data.url}">
+                                    <div class="notification-body">
+                                        <p class="mb-1">${notification.data.message}</p>
+                                        <span class="notification-time">📢 ${humanTime}</span>
                                     </div>
-
-                                </div>
-
-                                <div class="notification-body">
-
-                                    <p class="mb-1">${notification.data.message}</p>
-
-                                    <span class="notification-time">
-
-                                        <span class="me-2" role="img" aria-label="Emoji">📢</span> ${humanTime}
-
-                                    </span>
-
-                                </div>
-
-                            </a>
-
-                        </div>
-
-                    `;
-
+                                </a>
+                            </div>`;
                         });
 
                     } else {
-
                         html = `<p class="text-center text-muted p-3">No notifications found</p>`;
-
                     }
 
-
-
                     $('.list-group.list-group-flush.fw-normal.fs-10').html(html);
-
                 }
-
             });
-
         }
-
-
 
         // global Notifications
 

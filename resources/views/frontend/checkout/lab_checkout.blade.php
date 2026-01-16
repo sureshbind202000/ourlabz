@@ -1103,7 +1103,7 @@
 
                                                                 type="radio" name="schedule_for"
 
-                                                                id="homeCollectionRadio" value="1">
+                                                                id="homeCollectionRadio" value="2">
 
                                                             <label class="form-check-label" for="homeCollectionRadio">
 
@@ -1121,7 +1121,7 @@
 
                                                                 type="radio" name="schedule_for" id="labVisitRadio"
 
-                                                                value="2">
+                                                                value="1">
 
                                                             <label class="form-check-label" for="labVisitRadio">
 

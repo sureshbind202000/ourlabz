@@ -2,6 +2,40 @@
 
 @section('css')
 
+<style>
+    .table-sm td, .table-sm th {
+        padding: 0.4rem;
+        font-size: 0.875rem;
+        vertical-align: middle;
+    }
+
+    .text-sm {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.25em 0.5em;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .accordion-button {
+        padding: 0.75rem 1rem;
+    }
+
+    .accordion-body {
+        padding: 0.5rem;
+    }
+
+    .table {
+        margin-bottom: 0 !important;
+    }
+</style>
+
     <style>
 .prescription-card {
     transition: all 0.25s ease;
@@ -304,7 +338,7 @@
 
             <div class="card">
 
-                <div class="card-header d-flex flex-between-center">
+                <div class="card-header d-flex flex-between-center @if($details->is_emergency) bg-danger bg-gradient opacity-75 @else bg-body-tertiary @endif">
 
                     <a href="{{ url()->previous() }}" class="btn btn-falcon-default btn-sm">
 
@@ -315,6 +349,16 @@
 
 
                     <div class="d-flex">
+                        <div class="form-check form-switch d-flex justify-content-center">
+                                    <input
+                                        class="form-check-input emergency-toggle"
+                                        type="checkbox"
+                                        data-id="{{ $details->id }}"
+                                        id="emergencyToggle"
+                                        {{ $details->is_emergency ? 'checked' : '' }}
+                                    >
+                                </div>
+
                         @if($details->status != 'Completed' && $details->status != 'Cancelled')
                         <button class="btn btn-falcon-primary btn-sm mx-2 refer-lab-btn" type="button"
 
@@ -511,459 +555,240 @@
             </div>
 
             <div class="accordion" id="accordionPanelsStayOpenExample">
+            @php
+                // Prepare sample map: [test_id-patient_id] => sample
+                $sampleMap = [];
+                foreach ($details->trackSamples as $sample) {
+                    $sampleMap[$sample->test_id . '-' . $sample->patient_id] = $sample;
+                }
+            @endphp
 
+            @foreach ($details->patients as $patient)
                 @php
-
-                    // Prepare sample map: [test_id-patient_id] => sample
-
-                    $sampleMap = [];
-
-                    foreach ($details->trackSamples as $sample) {
-
-                        $sampleMap[$sample->test_id . '-' . $sample->patient_id] = $sample;
-
-                    }
-
+                    $patientTests = $details->tests->where('booking_patient_id', $patient->id);
+                    $testCount = $patientTests->count();
                 @endphp
 
-
-
-                @foreach ($details->patients as $patient)
-
-                    @php
-
-                        $patientTests = $details->tests->where('booking_patient_id', $patient->id);
-
-                        $testNames = $patientTests->pluck('package.name')->filter()->join(', ');
-
-
-
-                        // Fetch first sample linked to any of the patient's tests
-
-                            $sample = null;
-
-                            foreach ($patientTests as $pt) {
-
-                                $key = $pt->id . '-' . $patient->id;
-
-                            if (isset($sampleMap[$key])) {
-
-                                $sample = $sampleMap[$key];
-
-                                break;
-
-                            }
-
-                        }
-
-                    @endphp
-
-
-
-                    <div class="accordion-item mb-2">
-
-                        <h2 class="accordion-header">
-
-                            <button class="accordion-button collapsed text-primary gap-2" type="button"
-
-                                data-bs-toggle="collapse" data-bs-target="#collapse-{{ $patient->id }}"
-
-                                aria-expanded="false" aria-controls="collapse-{{ $patient->id }}">
-
-                                <i class="fa-solid fa-hospital-user me-2"></i> {{ $patient->name }} -
-
-                                {{ $testNames ?: 'No test found' }} :
-
-                                {{ $sample ? getSampleStatus($sample->status) : 'N/A' }}
-
-                                @php
-
-                                    $refer_test = \App\Models\ReferedTest::where(
-
-                                        'refered_test_id',
-
-                                        $sample->test_id ?? null,
-
-                                    )->first();
-
-                                    $refer_lab_name = $refer_test
-
-                                        ? \App\Models\lab::where('lab_id', $refer_test->refered_lab_id)->first()
-
-                                        : null;
-
-                                @endphp
-
-
-
-                                @if ($refer_test && $refer_lab_name)
-
-                                    <small class="text-muted ms-2">
-
-                                        (Referred to: {{ $refer_lab_name->lab_name }} {{ $refer_lab_name->lab_id }})
-
-                                    </small>
-
-                                @endif
-
-
-
-                            </button>
-
-                        </h2>
-
-                        <div id="collapse-{{ $patient->id }}" class="accordion-collapse collapse">
-
-                            <div class="accordion-body">
-
-                                <div class="row">
-
-                                    <div class="col-md-4 fs-10 text-dark border-end">
-
-                                        <p class="border-bottom pb-2"><strong>Patient Information <i
-
-                                                    class="fas fa-arrow-turn-down"></i></strong></p>
-
-                                        <p class="mb-0"><strong>Phone:</strong> {{ $patient->phone }}</p>
-
-                                        <p class="mb-0"><strong>Email:</strong> {{ $patient->email }}</p>
-
-                                        <p class="mb-0"><strong>DOB:</strong> {{ $patient->dob }}</p>
-
-                                        <p class="mb-0"><strong>Age:</strong> {{ $patient->age }} yrs</p>
-
-                                        <p class="mb-0"><strong>Relation:</strong> {{ $patient->relation }}</p>
-
-                                        <p class="mb-0"><strong>Prescription:</strong>
-                                            @if($patient->prescription)
-                                                <a href="{{ asset($patient->prescription) }}" target="_blank" rel="noopener noreferrer">
-                                                    View Prescription
-                                                </a>
-                                            @else
-                                                No Prescription Uploaded
-                                            @endif
-                                        </p>
-
-                                    </div>
-
-
-
-                                    <div class="col-md-4 fs-10 text-dark border-end">
-
-                                        <p class="border-bottom pb-2"><strong>Sample <i
-
-                                                    class="fas fa-arrow-turn-down"></i></strong></p>
-
-                                        <p>
-
-                                            <strong>Status - </strong>
-
-                                            {{ $sample ? getSampleStatus($sample->status) : 'N/A' }}
-
-                                            <br>
-
-                                            @if ($sample)
-
-                                                @if ($sample->status >= 1)
-
-                                                    @if (!empty($sample->sample_image) && is_array($sample->sample_image))
-
-                                                        <strong>Images:</strong>
-
-                                                        <div class="d-flex flex-wrap gap-2 mt-2">
-
-                                                            @foreach ($sample->sample_image as $img)
-
-                                                                <a href="{{ asset($img) }}" class="glightbox"
-
-                                                                    data-gallery="gallery{{ $sample->id }}"
-
-                                                                    data-bs-toggle="tooltip"
-
-                                                                    title="Click to view collected sample image">
-
-                                                                    <img src="{{ asset($img) }}" alt="Sample Image"
-
-                                                                        style="width: 80px; height: 80px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
-
-                                                                </a>
-
-                                                            @endforeach
-
-                                                        </div>
-
-                                                    @endif
-
-
-
-                                                    @if ($sample->status == 4 || $sample->status == 5)
-
-                                                        <br>
-
-                                                        <strong>Reason :</strong> <small> {{ $sample->reason }}</small>
-
-                                                    @endif
-
-                                                   
-
-                                                    @if ($sample->sample_image !== 'N/A' && $sample->status < 5 && $details->status != 'Completed')
-
-                                                     <br>
-
-                                                    <strong>Sample Controls - </strong>
-
-                                                    <br>
-
-                                                    <br>
-
-                                                        <div class="btn-group">
-
-                                                            @if ($sample->status >= 1 && $sample->status != 3)
-
-                                                                <button
-
-                                                                    class="btn btn-outline-success btn-sm accept-sample"
-
-                                                                    data-sample-id="{{ $sample->id }}"
-
-                                                                    data-bs-toggle="tooltip" data-bs-placement="top"
-
-                                                                    title="Accept Sample"><i
-
-                                                                        class="fas fa-check"></i></button>
-
-                                                            @endif
-
-                                                            @if ($sample->status >= 1)
-
-                                                                <button class="btn btn-outline-danger btn-sm reject-sample"
-
-                                                                    data-sample-id="{{ $sample->id }}"
-
-                                                                    data-bs-toggle="tooltip" data-bs-placement="top"
-
-                                                                    title="Reject Sample"><i
-
-                                                                        class="fas fa-xmark"></i></button>
-
-                                                            @endif
-
-                                                        </div>
-
-                                                    @endif
-
-                                                @endif
-
-                                            @else
-
-                                                No sample uploaded.
-
-                                            @endif
-
-                                        </p>
-
-                                    </div>
-
-
-
-                                    <div class="col-md-4 fs-10 text-dark">
-
-                                        <p class="border-bottom pb-2"><strong>Report <i
-
-                                                    class="fas fa-arrow-turn-down"></i></strong></p>
-
-
-
-                                        @foreach ($patientTests as $test)
-
-                                            <p>
-
-                                                <strong>Verify Report - </strong>
-
-
-
-                                                @if (!empty($test->report_file))
-
-                                                    <span class="text-muted">
-
-                                                        @if ($test->verify === 'Verified' && $test->verify_id)
-
-                                                            Report verified by
-
-                                                            <strong>{{ \App\Models\User::find($test->verify_id)?->name ?? 'Unknown Doctor' }}</strong>
-
-                                                        @else
-
-                                                            Report not verified.
-
-                                                        @endif
-
-                                                    </span>
-
-                                                @else
-
-                                                    <span class="text-muted">No report file uploaded.</span>
-
-                                                @endif
-
-
-
-                                                <br>
-
-
-
-                                                <strong>Certify Report - </strong>
-
-
-
-                                                @if (!empty($test->report_file))
-
-                                                    <span class="text-muted">
-
-                                                        @if ($test->certify === 'Certified' && $test->certify_id)
-
-                                                            Report certified by
-
-                                                            <strong>{{ \App\Models\User::find($test->certify_id)?->name ?? 'Unknown Doctor' }}</strong>
-
-                                                        @else
-
-                                                            Report not certified.
-
-                                                        @endif
-
-                                                    </span>
-
-                                                @else
-
-                                                    <span class="text-muted">No report file uploaded.</span>
-
-                                                @endif
-
-                                                <br>
-
-                                                <strong>Forwarding - </strong>
-
-                                                @if (!empty($test->fwd_id))
-
-                                                    @php
-
-                                                        $doctor = App\Models\User::find($test->fwd_id);
-
-                                                    @endphp
-
-                                                    <span class="text-muted">Report forwarded to
-
-                                                        <strong>{{ $doctor->name }}</strong></span>
-
-                                                @else
-
-                                                    <span class="text-muted">No report forward to any doctor.</span>
-
-                                                @endif
-
-                                                <br>
-
-                                                <br>
-
-                                                <strong class="pb-0">Report Controls - </strong>
-
-                                                <br>
-
-                                                <br>
-
-                                                @if (!empty($test->report_file))
-
-                                                    <a href="{{ asset($test->report_file) }}" target="_blank"
-
-                                                        class="btn btn-sm btn-falcon-success" data-bs-toggle="tooltip"
-
-                                                        title="Download Report">
-
-                                                        <i class="fa-solid fa-download"></i>
-
-                                                    </a>
-
-                                                    @if (empty($test->fwd_id))
-
-                                                        <a href="{{ asset($test->report_file) }}" target="_blank"
-
-                                                            class="btn btn-sm btn-falcon-primary ms-1 fwd-report-btn"
-
-                                                            data-id="{{ $test->id }}" data-bs-toggle="tooltip"
-
-                                                            title="Forward report to doctor (Verify/Certify).">
-
-                                                            <i class="fa-solid fa-share-from-square"></i>
-
-                                                        </a>
-
-                                                    @elseif($details->status != 'Completed' && $details->status != 'Cancelled')
-                                                        
-                                                        <a href="{{ asset($test->report_file) }}" target="_blank"
-
-                                                            class="btn btn-sm btn-falcon-primary ms-1 fwd-report-btn"
-
-                                                            data-id="{{ $test->id }}" data-bs-toggle="tooltip"
-
-                                                            title="Report already forwarded. Click to change the doctor.">
-
-                                                            <i class="fa-solid fa-share-from-square"></i>
-
-                                                        </a>
-                                                       
-                                                    @endif
-                                                    @if($details->status != 'Completed' && $details->status != 'Cancelled')
-                                                    <a href="javascript:void(0);" target="_blank"
-
-                                                        class="btn btn-sm btn-falcon-danger ms-1 delete-report-btn"
-
-                                                        data-id="{{ $test->id }}" data-bs-toggle="tooltip"
-
-                                                        title="Delete Report">
-
-                                                        <i class="fa-solid fa-trash"></i>
-
-                                                    </a>
-                                                    @endif
-
-                                                @elseif($details->status != 'Cancelled')
-
-                                                    <button type="button"
-
-                                                        class="btn btn-sm btn-falcon-primary upload-report-btn"
-
-                                                        data-bs-toggle="tooltip" title="Upload Report"
-
-                                                        data-patient_id="{{ $patient->id }}">
-
-                                                        <i class="fa-solid fa-upload"></i>
-
-                                                    </button>
-
-                                                @endif
-
-                                            </p>
-
-                                        @endforeach
-
-                                    </div>
-
+                <div class="accordion-item mb-2 ">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed text-primary" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapse-{{ $patient->id }}"
+                            aria-expanded="false" aria-controls="collapse-{{ $patient->id }}">
+                            <div class="d-flex align-items-center w-100">
+                                <i class="fa-solid fa-hospital-user me-2"></i>
+                                <span class="fw-bold">{{ $patient->name }}</span>
+                                <span class="badge bg-primary ms-2">{{ $testCount }} Test{{ $testCount > 1 ? 's' : '' }}</span>
+                                <small class="text-muted ms-auto me-3">{{ $patient->age }}Y | {{ $patient->phone }}</small>
+                            </div>
+                        </button>
+                    </h2>
+
+                    <div id="collapse-{{ $patient->id }}" class="accordion-collapse collapse">
+                        <div class="accordion-body p-2">
+                            <!-- Patient Basic Info -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <strong><i class="fas fa-user"></i> Patient Information</strong>
                                 </div>
+                                <div class="card-body">
+                                    <div class="row fs-10">
+                                        <div class="col-md-3">
+                                            <p class="mb-1"><strong>Phone:</strong> {{ $patient->phone }}</p>
+                                            <p class="mb-1"><strong>Email:</strong> {{ $patient->email }}</p>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <p class="mb-1"><strong>DOB:</strong> {{ $patient->dob }}</p>
+                                            <p class="mb-1"><strong>Age:</strong> {{ $patient->age }} yrs</p>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <p class="mb-1"><strong>Relation:</strong> {{ $patient->relation }}</p>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <p class="mb-1"><strong>Prescription:</strong>
+                                                @if($patient->prescription)
+                                                    <a href="{{ asset($patient->prescription) }}" target="_blank" rel="noopener noreferrer">
+                                                        View <i class="fas fa-external-link-alt"></i>
+                                                    </a>
+                                                @else
+                                                    <span class="text-muted">Not Uploaded</span>
+                                                @endif
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
+                            <!-- Tests Table -->
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 5%">#</th>
+                                            <th style="width: 25%">Test Name</th>
+                                            <th style="width: 25%">Bar Code</th>
+                                            <th style="width: 25%">Sample Status</th>
+                                            <th style="width: 25%">Report Status</th>
+                                            <th style="width: 20%" class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($patientTests as $index => $test)
+                                            @php
+                                                $sample = $sampleMap[$test->id . '-' . $patient->id] ?? null;
+                                                $testName = $test->package->name ?? 'Unknown Test';
 
+                                                // Referral Info
+                                                $refer_test = \App\Models\ReferedTest::where('refered_test_id', $test->id)->first();
+                                                $refer_lab_name = $refer_test
+                                                    ? \App\Models\lab::where('lab_id', $refer_test->refered_lab_id)->first()
+                                                    : null;
+                                            @endphp
+                                            <tr data-patient="{{ $patient->id }}" data-test="{{ $test->id }}">
+                                                <td class="text-center fw-bold">{{ $index + 1 }}</td>
 
+                                                <!-- Test Name -->
+                                                <td>
+                                                    <strong>{{ $testName }}</strong>
+                                                     @if ($refer_test && $refer_lab_name)
+                                                        <br><small class="text-warning">
+                                                            <i class="fas fa-share"></i> {{ $refer_lab_name->lab_name }}
+                                                        </small>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if ($test->is_barcode)
+
+                                                        <div class="d-flex gap-4 barcode-container">
+                                                            <img src="{{ $test->barcode }}" alt="Barcode" style="max-height: 40px;">
+                                                        {{-- <a href="{{ $test->barcode }}" target="_blank" class="btn btn-success" data-bs-toggle="tooltip" aria-label="Download" data-bs-original-title="Download">
+
+                                                            </a> --}}
+                                                            <button data-image="{{ $test->barcode }}" class="btn btn-success downloadBarCode"><i class="fa-solid fa-download"></i></button>
+
+                                                        </div>
+                                                    @else
+                                                        <span class="text-muted notGenerated">Not Generated</span>
+                                                    @endif
+
+                                                </td>
+
+                                                <!-- Sample Status -->
+                                                <td>
+                                                    @if ($sample)
+                                                        {{-- <span class="badge bg-{{ $sample->status == 3 ? 'success' : ($sample->status >= 4 ? 'danger' : 'warning') }}"> --}}
+                                                            {{ getSampleStatus($sample->status) }}
+                                                        {{-- </span> --}}
+
+                                                        @if ($sample->status >= 1 && !empty($sample->sample_image) && is_array($sample->sample_image))
+                                                            <br>
+                                                            <div class="d-flex align-items-center">
+
+                                                            <div class="d-flex gap-1 mt-1">
+                                                                @foreach (array_slice($sample->sample_image, 0, 2) as $img)
+                                                                    <a href="{{ asset($img) }}" class="glightbox"
+                                                                        data-gallery="gallery{{ $sample->id }}">
+                                                                        <span>View Sample..</span>
+                                                                        {{-- <img src="{{ asset($img) }}" alt="Sample"
+                                                                            style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; cursor: pointer;"> --}}
+                                                                    </a>
+                                                                @endforeach
+                                                                @if(count($sample->sample_image) > 2)
+                                                                    <small class="text-muted">+{{ count($sample->sample_image) - 2 }}</small>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+
+                                                        @if ($sample->sample_image !== 'N/A' && $sample->status < 5 && $details->status != 'Completed')
+
+                                                            <div class="btn-group btn-group-sm mt-1 ms-5" role="group">
+                                                                @if ($sample->status >= 1 && $sample->status != 3)
+                                                                    <button class="btn btn-success accept-sample w-50"
+                                                                        data-sample-id="{{ $sample->id }}"
+                                                                        data-bs-toggle="tooltip" title="Accept">
+                                                                        <i class="fas fa-check"></i>
+                                                                    </button>
+                                                                @endif
+                                                                @if ($sample->status >= 1)
+                                                                    <button class="btn btn-danger reject-sample w-50"
+                                                                        data-sample-id="{{ $sample->id }}"
+                                                                        data-bs-toggle="tooltip" title="Reject">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                @endif
+                                                            </div>
+                                                            </div>
+                                                        @endif
+
+                                                        @if (in_array($sample->status, [4, 5]) && $sample->reason)
+                                                            <small class="text-danger">{{ Str::limit($sample->reason, 30) }}</small>
+                                                        @endif
+                                                    @else
+                                                        <small class="text-muted">Not Assigned</small>
+                                                    @endif
+                                                </td>
+
+                                                <!-- Report Status -->
+                                                <td>
+                                                    @if (!empty($test->report_file))
+                                                        <div class="d-flex flex-column gap-1">
+                                                            @if ($test->verify === 'Verified')
+                                                                <small><i class="fas fa-check-circle text-success"></i> Verified</small>
+                                                            @endif
+                                                            @if ($test->certify === 'Certified')
+                                                                <small><i class="fas fa-certificate text-success"></i> Certified</small>
+                                                            @endif
+                                                            @if (!empty($test->fwd_id))
+                                                                @php $doctor = App\Models\User::find($test->fwd_id); @endphp
+                                                                <small><i class="fas fa-share text-info"></i> Fwd to {{ Str::limit($doctor->name, 15) }}</small>
+                                                            @endif
+                                                            @if ($test->verify !== 'Verified' && $test->certify !== 'Certified' && empty($test->fwd_id))
+                                                                <small class="text-muted">Uploaded</small>
+                                                            @endif
+                                                        </div>
+                                                    @elseif($details->status != 'Cancelled')
+                                                        <small class="text-muted">Not Uploaded</small>
+                                                    @endif
+                                                </td>
+
+                                                <!-- Actions -->
+                                                <td class="text-center">
+                                                    @if (!empty($test->report_file))
+                                                        <div class="btn-group btn-group-sm" role="group">
+                                                            <a href="{{ asset($test->report_file) }}" target="_blank"
+                                                                class="btn btn-success" data-bs-toggle="tooltip" title="Download">
+                                                                <i class="fa-solid fa-download"></i>
+                                                            </a>
+                                                            @if($details->status != 'Completed' && $details->status != 'Cancelled')
+                                                                <button type="button" class="btn btn-primary fwd-report-btn"
+                                                                    data-id="{{ $test->id }}" data-bs-toggle="tooltip" title="Forward">
+                                                                    <i class="fa-solid fa-share"></i>
+                                                                </button>
+                                                                <button type="button" class="btn btn-danger delete-report-btn"
+                                                                    data-id="{{ $test->id }}" data-bs-toggle="tooltip" title="Delete">
+                                                                    <i class="fa-solid fa-trash"></i>
+                                                                </button>
+                                                            @endif
+                                                        </div>
+                                                    @elseif($details->status != 'Cancelled')
+                                                        <button type="button" class="btn btn-sm btn-primary upload-report-btn"
+                                                            data-test_id="{{ $test->id }}"
+                                                            data-patient_id="{{ $patient->id }}"
+                                                            data-bs-toggle="tooltip" title="Upload Report">
+                                                            <i class="fa-solid fa-upload"></i>
+                                                        </button>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
                             </div>
 
                         </div>
-
                     </div>
-
-                @endforeach
-
-            </div>
-
-
+                </div>
+            @endforeach
+        </div>
 
             <div class="card mt-3">
 
@@ -1366,18 +1191,30 @@
                                             <strong>{{ $patient->name }}</strong>
 
                                             <div class="ms-3">
+                                                <div class="form-check">
 
+                                                        <input class="form-check-input select-all-patient" type="checkbox"
+                                                            id="assign_all_{{ $patient->id }}"
+                                                            value="{{ $patient->id }}"
+                                                            data-patient="{{ $patient->id }}">
+                                                        <label class="form-check-label"
+                                                            for="assign_all_{{ $patient->id }}">
+                                                             Select All
+                                                        </label>
+
+                                                    </div>
                                                 @foreach ($details->tests->where('booking_patient_id', $patient->id) as $test)
 
                                                     <div class="form-check">
 
-                                                        <input class="form-check-input" type="checkbox"
+                                                        <input class="form-check-input test-checkbox" type="checkbox"
 
                                                             name="assignments[]"
 
                                                             id="assign_{{ $patient->id }}_{{ $test->id }}"
 
-                                                            value="{{ $patient->id }}_{{ $test->id }}">
+                                                            value="{{ $patient->id }}_{{ $test->id }}"
+                                                            data-patient="{{ $patient->id }}">
 
                                                         <label class="form-check-label"
 
@@ -1600,75 +1437,53 @@
                     <div class="p-4">
 
                         <form id="generate-barcode-form" class="row">
-
-
-
                             <div class="form-group mb-3 col-12">
-
                                 <label>Select Patients and Tests <span class="text-danger">*</span></label>
-
                                 <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
-
                                     @foreach ($details->patients as $index => $patient)
-
                                         <div class="mb-2">
-
                                             <strong>{{ $patient->name }}</strong>
 
                                             <div class="ms-3">
-
-                                                @foreach ($details->tests->where('booking_patient_id', $patient->id) as $test)
-
-                                                    <div class="form-check">
-
-                                                        <input class="form-check-input" type="checkbox"
-
-                                                            name="assignments[]"
-
-                                                            id="assign_{{ $patient->id }}_{{ $test->id }}"
-
-                                                            value="{{ $patient->id }}_{{ $test->id }}">
+                                                <div class="form-check">
+                                                        <input class="form-check-input select-all-patient"
+                                                            type="checkbox"
+                                                            id="generate_bar_code_all_{{ $patient->id }}"
+                                                            data-patient="{{ $patient->id }}">
 
                                                         <label class="form-check-label"
-
-                                                            for="assign_{{ $patient->id }}_{{ $test->id }}">
-
-                                                            {{ $test->package->name }}
-
+                                                            for="generate_bar_code_all_{{ $patient->id }}">
+                                                            Select All
                                                         </label>
 
                                                     </div>
-
+                                                @foreach ($details->tests->where('booking_patient_id', $patient->id) as $test)
+                                                    <div class="form-check">
+                                                        <input class="form-check-input test-checkbox" type="checkbox"
+                                                            name="test_ids[]"
+                                                            id="generate_bar_code_{{ $patient->id }}_{{ $test->id }}"
+                                                            value="{{ $test->id }}"
+                                                            data-patient="{{ $patient->id }}"
+                                                            {{ $test->is_barcode ? 'disabled checked' : '' }}>
+                                                        <label class="form-check-label"
+                                                            for="generate_bar_code_{{ $patient->id }}_{{ $test->id }}">
+                                                            {{ $test->package->name }}
+                                                        </label>
+                                                    </div>
                                                 @endforeach
-
                                             </div>
-
                                         </div>
-
                                     @endforeach
-
                                 </div>
-
                             </div>
-
                             <div class="form-group mb-3 col-12">
-
                                 <input type="hidden" name="booking_id" value="{{ $details->id }}">
-
                                 <input type="hidden" id="booking_user_id" name="booking_user_id"
-
                                     value="{{ $details->user_id }}">
-
                                 <input type="hidden" id="booking_order_id" name="booking_order_id"
-
                                     value="{{ $details->order_id }}">
-
                                 <button type="submit" class="btn btn-primary bg-gradient w-100">Generate</button>
-
                             </div>
-
-
-
                         </form>
 
                     </div>
@@ -1687,9 +1502,93 @@
 
 @section('js')
 
+<script>
+$(document).ready(function () {
+
+    // 🔹 Select All (patient-wise, block-wise)
+    $(document).on('change', '.select-all-patient', function () {
+
+        let isChecked = $(this).is(':checked');
+
+        // Current patient block
+        let $patientBlock = $(this).closest('.mb-2');
+
+        $patientBlock.find('.test-checkbox')
+            .prop('checked', isChecked);
+    });
+
+    // 🔹 If any test unchecked → Select All unchecked
+    $(document).on('change', '.test-checkbox', function () {
+
+        let $patientBlock = $(this).closest('.mb-2');
+
+        let total   = $patientBlock.find('.test-checkbox').length;
+        let checked = $patientBlock.find('.test-checkbox:checked').length;
+
+        $patientBlock.find('.select-all-patient')
+            .prop('checked', total === checked);
+    });
+
+});
+</script>
+
+
+
     <script>
 
         $(document).ready(function() {
+
+             $(document).on('change', '.emergency-toggle', function () {
+
+            let bookingId = $(this).data('id');
+            let isEmergency = $(this).is(':checked') ? 1 : 0;
+
+                if(isEmergency) {
+                    $('.card-header').addClass('bg-danger opacity-75');
+                } else {
+                    $('.card-header').removeClass('bg-danger opacity-75');
+                }
+
+                $.ajax({
+                    url: "{{ route('patient.booking.toggle-emergency') }}",
+                    type: "POST",
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        booking_id: bookingId,
+                        is_emergency: isEmergency
+                    },
+                    success: function (res) {
+                        // fetchData(); // reload table
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Set emergency status updated!',
+                            text: res.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    },
+                    error: function () {
+                        alert('Something went wrong');
+                    }
+                });
+            });
+
+            function downloadBarcode(base64Image, filename = 'barcode.png') {
+                    const a = document.createElement('a');
+                    a.href = base64Image;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+
+
+            $(document).on('click', '.downloadBarCode', function(e) {
+                e.preventDefault();
+                const barcodeImage = $(this).attr('data-image');
+                downloadBarcode(barcodeImage, 'barcode.png');
+            });
+
 
             $(document).on('click', '.upload-report-btn', function(e) {
 
@@ -1810,7 +1709,6 @@
                     },
 
                     error: function(xhr) {
-
                         Swal.fire({
 
                             icon: 'error',
@@ -1866,18 +1764,17 @@
 
 
             $(document).on('click', '.upload-option', function() {
-            
+
                 var type = $(this).data('type');
-            
+
                 if (type === 'auto') {
-            
                     Swal.fire({
                         title: 'Fetching Auto Report...',
                         text: 'Please wait while we fetch and process your report.',
                         allowOutsideClick: false,
                         didOpen: () => Swal.showLoading()
                     });
-            
+
                     $.ajax({
                         url: "{{ route('upload.auto.report') }}",
                         method: 'POST',
@@ -1895,16 +1792,16 @@
                             Swal.fire("Error", xhr.responseJSON?.message || "Auto upload failed", "error");
                         }
                     });
-            
+
                     return;
                 }
-            
+
                 // existing manual upload code
                 if (type === 'manual') {
                     $('.upload-option').removeClass('border border-primary');
                     $(this).addClass('border border-primary');
                 }
-            
+
                 if (type === 'manual') {
                     $('#manual-upload-box').removeClass('d-none');
                 } else {
@@ -1920,8 +1817,6 @@
 
                 const file = fileInput.files[0];
 
-
-
                 if (!file) {
 
                     Swal.fire('Error', 'Please select a PDF file.', 'error');
@@ -1929,10 +1824,6 @@
                     return;
 
                 }
-
-
-
-
 
                 const formData = new FormData();
 
@@ -1999,40 +1890,19 @@
             });
 
 
-
-
-
-
-
             $(document).on('submit', '#store-sample-tracking', function(e) {
-
                 e.preventDefault();
-
-
-
                 let form = $(this);
-
                 let data = form.serialize();
 
-
-
                 Swal.fire({
-
                     title: 'Assigning...',
-
                     text: 'Please wait',
-
                     allowOutsideClick: false,
-
                     didOpen: () => {
-
                         Swal.showLoading()
-
                     }
-
                 });
-
-
 
                 $.ajax({
 
@@ -2608,85 +2478,49 @@
 
 
             // Accept sample
-
             $(document).on('click', '.accept-sample', function() {
-
                 const sampleId = $(this).data('sample-id');
 
-
-
                 Swal.fire({
-
                     title: 'Are you sure?',
-
                     text: "You are about to accept this sample.",
-
                     icon: 'question',
-
                     showCancelButton: true,
-
                     confirmButtonColor: '#198754',
-
                     cancelButtonColor: '#d33',
-
                     confirmButtonText: 'Yes, Accept it!',
-
                     cancelButtonText: 'Cancel'
-
                 }).then((result) => {
-
                     if (result.isConfirmed) {
-
                         $.ajax({
-
                             url: "{{ route('sample.update-status') }}",
-
                             type: "POST",
-
                             data: {
-
                                 _token: "{{ csrf_token() }}",
-
                                 sample_id: sampleId,
-
                                 status: 3
 
                             },
-
                             success: function(res) {
-
                                 Swal.fire('Accepted!', res.message, 'success');
-
                                 setTimeout(() => {
-
                                     window.location.reload();
-
                                 }, 1000);
 
                             },
 
                             error: function(xhr) {
-
                                 Swal.fire('Error', xhr.responseJSON.message ||
-
                                     'Something went wrong.', 'error');
-
                             }
-
                         });
-
                     }
-
                 });
-
             });
 
 
 
-
-
             // Open reject modal
-
             $(document).on('click', '.reject-sample', function() {
 
                 const sampleId = $(this).data('sample-id');
@@ -2748,107 +2582,75 @@
     <script>
 
         $(document).on('submit', '#generate-barcode-form', function(e) {
-
             e.preventDefault();
 
-
-
             const form = $(this);
-
             const submitBtn = form.find('button[type="submit"]');
 
             submitBtn.prop('disabled', true).text('Generating...');
 
-
-
             $.ajax({
-
                 type: 'POST',
-
                 url: '{{ route('barcode.generate') }}',
-
                 data: form.serialize(),
-
                 success: function(response) {
-
-                    submitBtn.prop('disabled', false).text('Assign');
-
-
-
-                    if (response.status && response.barcodes.length > 0) {
-
-                        let html = `<div class="mt-3"><h5>Generated Barcodes</h5><div class="row">`;
-
-
+                    submitBtn.prop('disabled', false).text('Generate');
+                    if (response.status) {
+                        let html = '';
 
                         response.barcodes.forEach(function(item, index) {
-
-                            html += `
-
-                            <div class="col-12 mb-3" id="barcode-block-${index}">
-
+                            html += `<div class="mt-3"><h5>${item.test_name}</h5><div class="row">
+                            <div class="col-12 mb-3">
                                 <div class="border p-2 rounded text-center printable-content">
-
-                                    <img src="${item.barcode_image}" alt="Barcode" class="img-fluid" />
-
+                                    <img src="${item.barcode_image}" class="img-fluid"/>
                                 </div>
-
-                                <div class="mt-1 text-center">
-
-                                    <button class="btn btn-sm btn-secondary print-btn mt-2" data-target="barcode-block-${index}">
-
-                                        Print
-
-                                    </button>
-
+                                <div class="text-center mt-2">
+                                    <button class="btn btn-sm btn-secondary print-btn">Print</button>
                                 </div>
-
                             </div>`;
 
+                            $('input[value="' + item.test_id + '"]data-patient[' + item.patient_id + ']').prop('checked', false).prop('disabled', true);
+
+                            updateBarcodeInTable(
+                                item.patient_id,
+                                item.test_id,
+                                item.barcode_image
+                            );
                         });
 
-
-
                         html += `</div></div>`;
-
                         $('#barcode-modal .modal-body .p-4').append(html);
-
                     } else {
-
-                        alert('No barcode generated.');
-
+                        Swal.fire('Error', response.message, 'error');
                     }
-
                 },
-
-                error: function(xhr) {
-
-                    console.log(xhr);
-
-                    submitBtn.prop('disabled', false).text('Assign');
-
-
-
-                    let errors = xhr.responseJSON?.errors;
-
-                    if (errors) {
-
-                        let messages = Object.values(errors).flat().join('\n');
-
-                        alert("Validation Error:\n" + messages);
-
-                    } else {
-
-                        alert('An error occurred. Please try again.');
-
-                    }
-
+                error: function() {
+                    submitBtn.prop('disabled', false).text('Generate');
+                    alert('Something went wrong');
                 }
-
             });
-
         });
 
+
+        function updateBarcodeInTable(patientId, testId, barcodeImage) {
+
+            const row = $('tr[data-patient="' + patientId + '"][data-test="' + testId + '"]');
+
+            if (!row.length) return;
+
+            const barcodeHtml = `
+                <div class="d-flex gap-4 barcode-container">
+                    <img src="${barcodeImage}" alt="Barcode" style="max-height: 40px;">
+                    <button class="btn btn-success downloadBarCode"
+                            data-image="${barcodeImage}">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                </div>
+            `;
+
+            // Barcode column (3rd column)
+            row.find('td').eq(2).html(barcodeHtml);
+        }
 
 
         // Print specific barcode block

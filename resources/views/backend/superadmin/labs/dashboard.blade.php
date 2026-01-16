@@ -68,6 +68,18 @@
         </div>
     </div>
 
+    {{-- <!-- New Booking -->
+    <div class="col-md-3 col-xxl-3">
+        <a href="{{ route('lab.reviews') }}" class="text-decoration-none">
+            <div class="card h-md-100">
+                <div class="card-body text-center">
+                    <h6>Reviews</h6>
+                    <div class="fs-3 fw-bold text-primary">{{ $reviewCount }}</div>
+                    <div class="text-muted fs-11">Total Reviews</div>
+                </div>
+            </div>
+        </a>
+    </div> --}}
     <!-- Reviews -->
     <div class="col-md-3 col-xxl-3">
         <a href="{{ route('lab.reviews') }}" class="text-decoration-none">
@@ -94,20 +106,49 @@
         </a>
     </div>
 
+    <!-- Emergency Booking -->
+<div class="col-md-2 col-xxl-2">
+    <a href="{{ route('patient.bookings', ['is_emergency' => 1]) }}" class="text-decoration-none">
+        <div class="card h-md-100 border-start border-4 border-danger shadow-sm bg-danger bg-opacity-10">
+            <div class="card-body d-flex flex-column justify-content-center text-center">
+                <h6 class="fw-semibold text-danger mb-1">Emergency</h6>
+                <h3 class="fw-bold text-danger mb-0">
+                    {{ $statusCounts['emergency'] ?? 0 }}
+                </h3>
+            </div>
+        </div>
+    </a>
+</div>
+
+
+<!-- Un-Read -->
+<div class="col-md-2 col-xxl-2">
+    <a href="{{ route('patient.bookings', ['is_read' => 0]) }}" class="text-decoration-none">
+        <div class="card h-md-100 border-start border-4 border-info shadow-sm bg-opacity-10">
+            <div class="card-body d-flex flex-column justify-content-center text-center">
+                <h6 class="fw-semibold text-info mb-1">Un-Read</h6>
+                <h3 class="fw-bold text-dark mb-0">
+                    {{ $statusCounts['unread'] ?? 0 }}
+                </h3>
+            </div>
+        </div>
+    </a>
+</div>
+
     <!-- Pending -->
-    <div class="col-md-3 col-xxl-3">
-        <a href="{{ route('patient.bookings') }}" class="text-decoration-none">
+    <div class="col-md-2 col-xxl-2">
+        <a href="{{ route('patient.bookings', ['in_progress' => 1]) }}" class="text-decoration-none">
             <div class="card h-md-100 border-start border-4 border-warning shadow-sm">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
-                    <h6 class="fw-semibold text-warning mb-1">Pending</h6>
-                    <h3 class="fw-bold mb-0">{{ $statusCounts['pending'] ?? 0 }}</h3>
+                    <h6 class="fw-semibold text-warning mb-1">In-Progress</h6>
+                    <h3 class="fw-bold mb-0">{{ $statusCounts['in-progress'] ?? 0 }}</h3>
                 </div>
             </div>
         </a>
     </div>
 
     <!-- Confirmed -->
-    <div class="col-md-3 col-xxl-3">
+    <div class="col-md-2 col-xxl-2">
         <a href="{{ route('patient.bookings') }}" class="text-decoration-none">
             <div class="card h-md-100 border-start border-4 border-primary shadow-sm">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
@@ -119,7 +160,7 @@
     </div>
 
     <!-- Cancelled -->
-    <div class="col-md-3 col-xxl-3">
+    <div class="col-md-2 col-xxl-2">
         <a href="{{ route('patient.bookings.completed') }}" class="text-decoration-none">
             <div class="card h-md-100 border-start border-4 border-danger shadow-sm">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
@@ -131,7 +172,7 @@
     </div>
 
     <!-- Completed -->
-    <div class="col-md-3 col-xxl-3">
+    <div class="col-md-2 col-xxl-2">
         <a href="{{ route('patient.bookings.completed') }}" class="text-decoration-none">
             <div class="card h-md-100 border-start border-4 border-success shadow-sm">
                 <div class="card-body d-flex flex-column justify-content-center text-center">

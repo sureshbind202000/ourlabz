@@ -28,7 +28,7 @@
 
                 data-list='{"valueNames":["userid","name","phone","schedule","payment","status","date","tests"],"page":10,"pagination":true}'>
 
-                <div class="row justify-content-end g-0">
+                {{-- <div class="row justify-content-end g-0">
 
                     <div class="col-auto col-sm-5 mb-3">
 
@@ -55,6 +55,45 @@
 
                     </div>
 
+                </div> --}}
+
+                <div class="row align-items-center g-0 mb-2">
+
+                    <!-- Search -->
+                    <div class="col-auto col-sm-5 mb-3">
+                        <form>
+                            <div class="input-group">
+                                <input class="form-control form-control-sm shadow-none search"
+                                    type="search"
+                                    placeholder="Search..."
+                                    aria-label="search" />
+                                <div class="input-group-text bg-transparent">
+                                    <span class="fa fa-search fs-10 text-600"></span>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                     <!-- Legend -->
+                    <div class="col-auto me-3 ms-auto">
+                       <span class="badge bg-danger bg-opacity-10 text-danger border border-danger me-2">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i> Emergency
+                        </span>
+
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                            <i class="fa-solid fa-envelope-open-text me-1"></i> Unread
+                        </span>
+
+                    </div>
+                    <!-- Add Button -->
+                    <div class="col-auto ms-auto">
+                        <button class="btn btn-sm btn-falcon-primary me-1 mb-1"
+                                type="button"
+                                id="addModalBtn">
+                            <i class="fa-solid fa-plus"></i> Add
+                        </button>
+                    </div>
+
                 </div>
 
                 <div class="table-responsive scrollbar">
@@ -65,7 +104,7 @@
 
                             <tr>
 
-                                <th class="text-900">S.No.</th>
+                               <th class="text-900" data-sort="date">Date</th>
 
                                 <th class="text-900" data-sort="userid">Patient ID</th>
 
@@ -77,7 +116,8 @@
 
                                 <th class="text-900" data-sort="payment">Payment</th>
 
-                                <th class="text-900" data-sort="date">Date</th>
+                                <th class="test-900" data-sort="emergency">Emergency</th>
+
 
                                 <th class="text-900 text-center">Action</th>
 
@@ -100,8 +140,9 @@
                                 <td></td>
 
                                 <td></td>
-
                                 <td></td>
+
+
 
                                 <td></td>
 
@@ -196,7 +237,7 @@
                     </div>
 
                     <!-- {{-- Schedule For (Home/Lab) --}} -->
-                    
+
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Schedule For</label>
                         <select name="schedule_for" class="form-select" required>
@@ -323,7 +364,7 @@
 
             $.ajax({
 
-                url: "{{ route('patient.booking.list') }}",
+                url: "{{ route('patient.booking.list', request()->query()) }}",
 
                 type: "GET",
 
@@ -335,9 +376,18 @@
 
                     $.each(data, function(index, booking) {
 
-                        rows += `<tr>
 
-                            <td>${index + 1}</td>
+                        let rowClass = '';
+
+                        if (booking.is_emergency == 1) {
+                            rowClass = 'table-danger bg-opacity-10'; // light red
+                        } else if (booking.is_read == 0) {
+                            rowClass = 'table-info bg-opacity-10'; // light yellow
+                        }
+
+                        rows += `<tr class="${rowClass}">
+
+                            <td class="date">${formatDate(booking.created_at)}</td>
 
                             <td class="userid">${booking.user ? booking.user.user_id : '-'}</td>
 
@@ -349,7 +399,17 @@
 
                             <td class="payment">${getPaymentBadge(booking.payment_status)}</td>
 
-                            <td class="date">${formatDate(booking.created_at)}</td>
+                            <!-- Emergency Toggle Column -->
+                            <td class="text-center">
+                                <div class="form-check form-switch d-flex justify-content-center">
+                                    <input
+                                        class="form-check-input emergency-toggle"
+                                        type="checkbox"
+                                        data-id="${booking.id}"
+                                        ${booking.is_emergency == 1 ? 'checked' : ''}
+                                    >
+                                </div>
+                            </td>
 
                             <td class="text-center">
 
@@ -373,7 +433,7 @@
 
                                                         </div>
 
-                                
+
 
                             </td>
 
@@ -410,6 +470,28 @@
             });
 
         }
+
+        $(document).on('change', '.emergency-toggle', function () {
+
+            let bookingId = $(this).data('id');
+            let isEmergency = $(this).is(':checked') ? 1 : 0;
+
+            $.ajax({
+                url: "{{ route('patient.booking.toggle-emergency') }}",
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    booking_id: bookingId,
+                    is_emergency: isEmergency
+                },
+                success: function (res) {
+                    fetchData(); // reload table
+                },
+                error: function () {
+                    alert('Something went wrong');
+                }
+            });
+        });
 
 
 
@@ -459,6 +541,10 @@
 
                     return '<span class="badge bg-success">Completed</span>';
 
+                case 'In Progress':
+
+                    return '<span class="badge bg-info ">In Progress</span>';
+
                 default:
 
                     return '<span class="badge bg-secondary">Unknown</span>';
@@ -471,7 +557,7 @@
 
 
 
-        // Delete 
+        // Delete
 
         $(document).on('click', '.delete-btn', function() {
 

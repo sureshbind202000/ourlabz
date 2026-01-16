@@ -13,51 +13,117 @@ use Illuminate\Support\Facades\DB;
 
 class BarcodeController extends Controller
 {
-    public function generate(Request $request)
-    {
-        $request->validate([
-            'assignments' => 'required|array|min:1',
-            'booking_id' => 'required|integer',
+
+
+
+public function generate(Request $request)
+{
+    $request->validate([
+        'test_ids'   => 'required|array|min:1',
+        'booking_id'=> 'required|integer',
+    ]);
+
+    $barcodes = [];
+    $generator = new BarcodeGeneratorPNG();
+
+    foreach ($request->test_ids as $testId) {
+
+        $test = BookingTest::where('id', $testId)
+            ->where('booking_id', $request->booking_id)
+            ->first();
+
+        // ❌ Test not found
+        if (!$test) {
+            continue;
+        }
+
+        // ❌ Barcode already generated
+        if ($test->is_barcode == 1) {
+            continue;
+        }
+
+        // ✅ Unique barcode per test
+        $barcodeText = 'BK' . $test->booking_id . '-T' . $test->id;
+
+        $barcodeImage = $generator->getBarcode(
+            $barcodeText,
+            $generator::TYPE_CODE_128
+        );
+
+        $base64 = 'data:image/png;base64,' . base64_encode($barcodeImage);
+
+        // ✅ Update DB
+        $test->update([
+            'barcode'    => $base64,
+            'is_barcode' => 1,
         ]);
 
-        $bookingId = $request->booking_id;
-        $assignments = $request->assignments;
-
-        // Extract only test IDs (ignore patient IDs now)
-        $testIds = [];
-
-        foreach ($assignments as $value) {
-            [$patientId, $testId] = explode('_', $value);
-            $testIds[] = $testId;
-        }
-
-        // Remove duplicates just in case
-        $testIds = array_unique($testIds);
-
-        try {
-            // Create single combined barcode text
-            $barcodeText = "BK{$bookingId}|TID" . implode(',', $testIds);
-
-            $generator = new BarcodeGeneratorPNG();
-            $barcode = $generator->getBarcode($barcodeText, $generator::TYPE_CODE_128);
-
-            $base64 = 'data:image/png;base64,' . base64_encode($barcode);
-
-            return response()->json([
-                'status' => true,
-                'barcodes' => [[
-                    'barcode_text' => $barcodeText,
-                    'barcode_image' => $base64,
-                ]]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Barcode generation failed.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        $barcodes[] = [
+            'test_id'       => $test->id,
+            'patient_id'    => $test->booking_patient_id,
+            'test_name'     => $test->package->name ?? 'Test',
+            'barcode_text'  => $barcodeText,
+            'barcode_image' => $base64,
+        ];
     }
+
+    if (count($barcodes) === 0) {
+        return response()->json([
+            'status' => false,
+            'message'=> 'Selected tests already have barcodes'
+        ]);
+    }
+
+    return response()->json([
+        'status'   => true,
+        'barcodes' => $barcodes
+    ]);
+}
+
+    // public function generate(Request $request)
+    // {
+    //     $request->validate([
+    //         'test_ids' => 'required|array|min:1',
+    //         'booking_id' => 'required|integer',
+    //     ]);
+
+    //     $bookingId = $request->booking_id;
+    //     $testIds = $request->test_ids;
+
+    //     // Extract only test IDs (ignore patient IDs now)
+    //     $testIds = [];
+
+    //     foreach ($testIds as $value) {
+    //         $testIds[] = $value;
+    //     }
+
+    //     // Remove duplicates just in case
+    //     $testIds = array_unique($testIds);
+
+    //     try {
+    //         // Create single combined barcode text
+    //         $barcodeText = "BK{$bookingId}|TID" . implode(',', $testIds);
+
+    //         $generator = new BarcodeGeneratorPNG();
+    //         $barcode = $generator->getBarcode($barcodeText, $generator::TYPE_CODE_128);
+
+    //         $base64 = 'data:image/png;base64,' . base64_encode($barcode);
+
+    //         return response()->json([
+    //             'status' => true,
+    //             'barcodes' => [[
+    //                 'barcode_text' => $barcodeText,
+    //                 'barcode_image' => $base64,
+    //             ]]
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Barcode generation failed.',
+    //             'error' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
 
     public function scan(Request $request)
     {

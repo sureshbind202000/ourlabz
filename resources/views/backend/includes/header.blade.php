@@ -230,3 +230,5 @@
     </ul>
 
 </nav>
+
+<audio id="notifySound" src="{{ asset('backend/assets/audio/bell/notification.wav') }}" preload="auto"></audio>

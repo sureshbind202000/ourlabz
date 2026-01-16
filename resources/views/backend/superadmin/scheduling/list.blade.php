@@ -438,16 +438,16 @@
         </button>
         <div class="ms-auto me-3 d-flex">
     ${canEditSchedule ? `
-            <button class="btn btn-sm btn-falcon-warning bg-gradient edit-slots-btn ms-2" 
-                title="Edit Slots" 
-                data-date="${date}" 
+            <button class="btn btn-sm btn-falcon-warning bg-gradient edit-slots-btn ms-2"
+                title="Edit Slots"
+                data-date="${date}"
                 data-slots="${slots}">
                 <i class="fas fa-pen"></i>
             </button>` : ''}
 
     ${canDeleteSchedule ? `
-            <button class="btn btn-sm btn-falcon-danger bg-gradient delete-date-btn ms-2" 
-                title="Delete All for ${date}" 
+            <button class="btn btn-sm btn-falcon-danger bg-gradient delete-date-btn ms-2"
+                title="Delete All for ${date}"
                 data-date="${date}">
                 <i class="fas fa-trash-alt"></i>
             </button>` : ''}
@@ -479,11 +479,11 @@
                             </div>
                             <ul class="list-unstyled mb-0">
                                 <li class="mb-2">
-                                    <i class="fas fa-calendar-day text-success me-2"></i> 
+                                    <i class="fas fa-calendar-day text-success me-2"></i>
                                     <strong>${schedule.date}</strong> <span class="text-muted">(${schedule.day})</span>
                                 </li>
                                 <li class="mb-2">
-                                    <i class="fas fa-clock text-warning me-2"></i> 
+                                    <i class="fas fa-clock text-warning me-2"></i>
                                     ${schedule.from_time} <i class="fas fa-arrow-right mx-1"></i> ${schedule.to_time}
                                 </li>
                             </ul>

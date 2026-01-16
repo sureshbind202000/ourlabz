@@ -20,6 +20,8 @@ class BookingTest extends Model
         'fwd_id',
         'free_consultation',
         'status',
+        'is_barcode',
+        'barcode'
     ];
 
     public function package()

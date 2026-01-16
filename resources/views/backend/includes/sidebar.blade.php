@@ -680,7 +680,7 @@
 
                                 <div class="d-flex align-items-center"><span
 
-                                        class="nav-link-text ps-1">New</span>
+                                        class="nav-link-text ps-1">Booking</span>
 
                                 </div>
 
